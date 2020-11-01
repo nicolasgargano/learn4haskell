@@ -114,22 +114,30 @@ As always, try to guess the output first! And don't forget to insert
 the output in here:
 
 >>> :k Char
+Char :: *
 
 >>> :k Bool
+Bool :: *
 
 >>> :k [Int]
+[Int] :: *
 
 >>> :k []
+[] :: * -> *
 
 >>> :k (->)
+(->) :: * -> * -> *
 
 >>> :k Either
+Either :: * -> * -> *
 
 >>> data Trinity a b c = MkTrinity a b c
 >>> :k Trinity
+Trinity :: * -> * -> * -> *
 
 >>> data IntBox f = MkIntBox (f Int)
 >>> :k IntBox
+IntBox :: (* -> *) -> *
 
 -}
 
@@ -266,6 +274,9 @@ instance Functor Maybe where
     fmap f (Just a) = Just (f a)
     fmap _ x = x
 @
+
+> ANSWER: Because "x" is a (Maybe a)
+          and not a (Maybe b) as required by the result of fmap
 -}
 
 {- |
@@ -282,7 +293,6 @@ data Secret e a
     | Reward a
     deriving (Show, Eq)
 
-
 {- |
 Functor works with types that have kind `* -> *` but our 'Secret' has
 kind `* -> * -> *`. What should we do? Don't worry. We can partially
@@ -292,8 +302,13 @@ we can reuse already known concepts (e.g. partial application) from
 values and apply them to the type level?
 -}
 instance Functor (Secret e) where
-    fmap :: (a -> b) -> Secret e a -> Secret e b
-    fmap = error "fmap for Box: not implemented!"
+  fmap :: (a -> b) -> Secret e a -> Secret e b
+  fmap f secret =
+    case secret of
+      Trap e ->
+        Trap e
+      Reward a ->
+        Reward (f a)
 
 {- |
 =⚔️= Task 3
@@ -307,6 +322,14 @@ data List a
     = Empty
     | Cons a (List a)
 
+instance Functor List where
+  fmap :: (a -> b) -> List a -> List b
+  fmap f list =
+    case list of
+      Empty ->
+        Empty
+      Cons el rest ->
+        Cons (f el) (fmap f rest)
 {- |
 =🛡= Applicative
 
@@ -472,10 +495,15 @@ Implement the Applicative instance for our 'Secret' data type from before.
 -}
 instance Applicative (Secret e) where
     pure :: a -> Secret e a
-    pure = error "pure Secret: Not implemented!"
+    pure = Reward
 
     (<*>) :: Secret e (a -> b) -> Secret e a -> Secret e b
-    (<*>) = error "(<*>) Secret: Not implemented!"
+    (<*>) secretFn otherSecret =
+      case secretFn of
+        Reward fn ->
+          fmap fn otherSecret
+        Trap e ->
+          Trap e
 
 {- |
 =⚔️= Task 5
@@ -488,6 +516,26 @@ Implement the 'Applicative' instance for our 'List' type.
   may also need to implement a few useful helper functions for our List
   type.
 -}
+
+instance Applicative List where
+  pure :: a -> List a
+  pure a = Cons a Empty
+
+  (<*>) :: List (a -> b) -> List a -> List b
+  (<*>) fnList otherList =
+    case fnList of
+      Empty ->
+        Empty
+      Cons el rest ->
+        concatList (fmap el otherList) ((<*>) rest otherList)
+
+concatList :: List a -> List a -> List a
+concatList xs ys =
+  case ys of
+    Empty ->
+      xs
+    Cons el rest ->
+      concatList (Cons el xs) rest
 
 
 {- |
@@ -600,7 +648,12 @@ Implement the 'Monad' instance for our 'Secret' type.
 -}
 instance Monad (Secret e) where
     (>>=) :: Secret e a -> (a -> Secret e b) -> Secret e b
-    (>>=) = error "bind Secret: Not implemented!"
+    (>>=) secret dependantSecretFn =
+      case secret of
+        Trap e ->
+          Trap e
+        Reward a ->
+          dependantSecretFn a
 
 {- |
 =⚔️= Task 7
@@ -610,6 +663,15 @@ Implement the 'Monad' instance for our lists.
 🕯 HINT: You probably will need to implement a helper function (or
   maybe a few) to flatten lists of lists to a single list.
 -}
+
+instance Monad List where
+  (>>=) :: List a -> (a -> List b) -> List b
+  (>>=) list dependentListFn =
+    case list of
+      Empty ->
+        Empty
+      Cons el rest ->
+        concatList (dependentListFn el) ((>>=) rest dependentListFn)
 
 
 {- |
@@ -629,7 +691,13 @@ Can you implement a monad version of AND, polymorphic over any monad?
 🕯 HINT: Use "(>>=)", "pure" and anonymous function
 -}
 andM :: (Monad m) => m Bool -> m Bool -> m Bool
-andM = error "andM: Not implemented!"
+andM ma mb =
+  (>>=) ma (\a ->
+    if a then
+      (>>=) mb (\b -> pure (a && b))
+    else
+      pure False
+    )
 
 {- |
 =🐉= Task 9*: Final Dungeon Boss
