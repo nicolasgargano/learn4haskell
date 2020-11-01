@@ -35,7 +35,6 @@ your solutions.
 
 Okay. Ready? Set. Go!
 -}
-
 {-
 =⚗️= Language extensions*
 
@@ -713,178 +712,179 @@ calculatePlayerHit (Damage damage) (Defense defense) (Health health) = Health $ 
 -- The second player hits first player and the new first player is returned
 hitPlayer :: Player -> Player -> Player
 hitPlayer player1 player2 =
-    let damage = calculatePlayerDamage
-            (playerAttack player2)
-            (playerStrength player2)
-        defense = calculatePlayerDefense
-            (playerArmor player1)
-            (playerDexterity player1)
-        newHealth = calculatePlayerHit
-            damage
-            defense
-            (playerHealth player1)
-    in player1 { playerHealth = newHealth }
+  let damage =
+        calculatePlayerDamage
+          (playerAttack player2)
+          (playerStrength player2)
+      defense =
+        calculatePlayerDefense
+          (playerArmor player1)
+          (playerDexterity player1)
+      newHealth =
+        calculatePlayerHit
+          damage
+          defense
+          (playerHealth player1)
+   in player1 {playerHealth = newHealth}
 
-{- |
-=🛡= Polymorphic data types
+-- |
+-- =🛡= Polymorphic data types
+--
+-- Similar to functions, data types in Haskell can be __polymorphic__. This means
+-- that they can use some type variables as placeholders, representing general
+-- types. You can either reason about data types in terms of such variables (and
+-- don't worry about the specific types), or substitute variables with some
+-- particular types.
+-- Such polymorphism in Haskell is an example of the __parametric polymorphism__.
+--
+-- The process of defining a polymorphic type is akin to the ordinary data type
+-- definition. The only difference is that all the type variables should go after
+-- the type name so that you can reuse them in the constructor fields later.
+--
+-- For example,
+--
+-- @
+-- data Foo a = MkFoo a
+-- @
+--
+-- Note that both product and sum types can be parameterised.
+--
+-- > Actually, we've already seen a polymorphic data type! Remember Lists from Chapter Two?
+--
+-- To give an example of a custom polymorphic type, let's implement a
+-- "TreasureChest" data type. Our treasure chest is flexible, and it can store some
+-- amount of gold. Additionally there is some space for one more arbitrary
+-- treasure. But that could be any treasure, and we don't know what it is
+-- beforehand.
+--
+-- In Haskell words, the data type can be defined like this:
+--
+-- @
+-- data TreasureChest x = TreasureChest
+--     { treasureChestGold :: Int
+--     , treasureChestLoot :: x
+--     }
+-- @
+--
+-- You can see that a treasure chest can store any treasure, indeed! We call it
+-- treasure 'x'.
+--
+-- And when writing functions involving the "TreasureChest" type, we don't always
+-- need to know what kind of treasure is inside besides gold.
+-- We can either use a type variable in our type signature:
+--
+-- @
+-- howMuchGoldIsInMyChest :: TreasureChest x -> Int
+-- @
+--
+-- or we can specify a concrete type:
+--
+-- @
+-- isEnoughDiamonds :: TreasureChest Diamond -> Bool
+-- @
+--
+-- In the same spirit, we can implement a function that creates treasure with some
+-- predefined amount of gold and a given treasure:
+--
+-- @
+-- mkMehChest :: x -> TreasureChest x
+-- mkMehChest treasure = TreasureChest
+--     { treasureChestGold = 50
+--     , treasureChestLoot = treasure
+--     }
+-- @
+--
+--
+-- Polymorphic Algebraic Data Types are a great deal! One of the most common and
+-- useful standard polymorphic types is __"Maybe"__. It represents the notion of
+-- optional value (maybe the value is there, or maybe it is not).
+-- "Maybe" is defined in the standard library in the following way:
+--
+-- @
+-- data Maybe a
+--     = Nothing
+--     | Just a
+-- @
+--
+-- Haskell doesn't have a concept of "null" values. If you want to work with
+-- potentially absent values, use the "Maybe" type explicitly.
+--
+-- > Is there a good way to avoid null-pointer bugs? Maybe. © Jasper Van der Jeught
+--
+-- Another standard polymorphic data type is "Either". It stores either the value
+-- of one type or a value of another.
+--
+-- @
+-- data Either a b
+--     = Left a
+--     | Right b
+-- @
+--
+-- ♫ NOTE: It can help to explore types of constructors "Nothing", "Just", "Left"
+--   and "Right". Let's stretch our fingers and blow off the dust from our GHCi and
+--   check that!
+--
+-- You can pattern match on values of the "Either" type as well as on any other
+-- custom data type.
+--
+-- @
+-- showEither :: Either String Int -> String
+-- showEither (Left msg) = "Left with string: " ++ msg
+-- showEither (Right n) = "Right with number: " ++ show n
+-- @
+--
+-- Now, after we covered polymorphic types, you are finally ready to learn how
+-- lists are actually defined in the Haskell world. Behold the might list type!
+--
+-- @
+-- data [] a
+--     = []
+--     | a : [a]
+-- @
+--
+-- Immediately we know what all of that means!
+-- The ":" is simply the constructor name for the list. Constructors in Haskell can
+-- be defined as infix operators as well (i.e. be written after the first argument,
+-- the same way we write `1 + 2` and not `+ 1 2`), but only if they start with a
+-- colon ":". The ":" is taken by lists. Now you see why we were able to pattern
+-- match on it?
+--
+-- The type name uses built-in syntax to reserve the square brackets [] exclusively
+-- for lists but, otherwise, is a simple polymorphic recursive sum type.
+--
+-- If you rename some constructor and type names, the list type could look quite
+-- simple, as any of us could have written it:
+--
+-- @
+-- data List a
+--     = Empty
+--     | Cons a (List a)
+-- @
+--
+-- ♫ NOTE: We use () to group "List" with "a" type variable in the second field of
+--   the "Cons" constructor. This is done to tell the compiler that "List" and "a"
+--   should go together as one type.
 
-Similar to functions, data types in Haskell can be __polymorphic__. This means
-that they can use some type variables as placeholders, representing general
-types. You can either reason about data types in terms of such variables (and
-don't worry about the specific types), or substitute variables with some
-particular types.
-Such polymorphism in Haskell is an example of the __parametric polymorphism__.
-
-The process of defining a polymorphic type is akin to the ordinary data type
-definition. The only difference is that all the type variables should go after
-the type name so that you can reuse them in the constructor fields later.
-
-For example,
-
-@
-data Foo a = MkFoo a
-@
-
-Note that both product and sum types can be parameterised.
-
-> Actually, we've already seen a polymorphic data type! Remember Lists from Chapter Two?
-
-To give an example of a custom polymorphic type, let's implement a
-"TreasureChest" data type. Our treasure chest is flexible, and it can store some
-amount of gold. Additionally there is some space for one more arbitrary
-treasure. But that could be any treasure, and we don't know what it is
-beforehand.
-
-In Haskell words, the data type can be defined like this:
-
-@
-data TreasureChest x = TreasureChest
-    { treasureChestGold :: Int
-    , treasureChestLoot :: x
-    }
-@
-
-You can see that a treasure chest can store any treasure, indeed! We call it
-treasure 'x'.
-
-And when writing functions involving the "TreasureChest" type, we don't always
-need to know what kind of treasure is inside besides gold.
-We can either use a type variable in our type signature:
-
-@
-howMuchGoldIsInMyChest :: TreasureChest x -> Int
-@
-
-or we can specify a concrete type:
-
-@
-isEnoughDiamonds :: TreasureChest Diamond -> Bool
-@
-
-In the same spirit, we can implement a function that creates treasure with some
-predefined amount of gold and a given treasure:
-
-@
-mkMehChest :: x -> TreasureChest x
-mkMehChest treasure = TreasureChest
-    { treasureChestGold = 50
-    , treasureChestLoot = treasure
-    }
-@
-
-
-Polymorphic Algebraic Data Types are a great deal! One of the most common and
-useful standard polymorphic types is __"Maybe"__. It represents the notion of
-optional value (maybe the value is there, or maybe it is not).
-"Maybe" is defined in the standard library in the following way:
-
-@
-data Maybe a
-    = Nothing
-    | Just a
-@
-
-Haskell doesn't have a concept of "null" values. If you want to work with
-potentially absent values, use the "Maybe" type explicitly.
-
-> Is there a good way to avoid null-pointer bugs? Maybe. © Jasper Van der Jeught
-
-Another standard polymorphic data type is "Either". It stores either the value
-of one type or a value of another.
-
-@
-data Either a b
-    = Left a
-    | Right b
-@
-
-♫ NOTE: It can help to explore types of constructors "Nothing", "Just", "Left"
-  and "Right". Let's stretch our fingers and blow off the dust from our GHCi and
-  check that!
-
-You can pattern match on values of the "Either" type as well as on any other
-custom data type.
-
-@
-showEither :: Either String Int -> String
-showEither (Left msg) = "Left with string: " ++ msg
-showEither (Right n) = "Right with number: " ++ show n
-@
-
-Now, after we covered polymorphic types, you are finally ready to learn how
-lists are actually defined in the Haskell world. Behold the might list type!
-
-@
-data [] a
-    = []
-    | a : [a]
-@
-
-Immediately we know what all of that means!
-The ":" is simply the constructor name for the list. Constructors in Haskell can
-be defined as infix operators as well (i.e. be written after the first argument,
-the same way we write `1 + 2` and not `+ 1 2`), but only if they start with a
-colon ":". The ":" is taken by lists. Now you see why we were able to pattern
-match on it?
-
-The type name uses built-in syntax to reserve the square brackets [] exclusively
-for lists but, otherwise, is a simple polymorphic recursive sum type.
-
-If you rename some constructor and type names, the list type could look quite
-simple, as any of us could have written it:
-
-@
-data List a
-    = Empty
-    | Cons a (List a)
-@
-
-♫ NOTE: We use () to group "List" with "a" type variable in the second field of
-  the "Cons" constructor. This is done to tell the compiler that "List" and "a"
-  should go together as one type.
--}
-
-{- |
-=⚔️= Task 6
-
-Before entering the real world of adventures and glorious victories, we should
-prepare for different things in this world. It is always a good idea to
-understand the whole context before going for a quest. And, before fighting a
-dragon, it makes sense to prepare for different unexpected things. So let's
-define data types describing a Dragon Lair!
-
- ⍟ A lair has a dragon and possibly a treasure chest (as described in the
-   previous section). A lair also may not contain any treasures, but we'll never
-   know until we explore the cave!
- ⍟ A dragon can have a unique magical power. But it can be literally anything!
-   And we don't know in advance what power it has.
-
-Create data types that describe such Dragon Lair! Use polymorphism to
-parametrise data types in places where values can be of any general type.
-
-🕯 HINT: 'Maybe' that some standard types we mentioned above are useful for
-  maybe-treasure ;)
--}
+-- |
+-- =⚔️= Task 6
+--
+-- Before entering the real world of adventures and glorious victories, we should
+-- prepare for different things in this world. It is always a good idea to
+-- understand the whole context before going for a quest. And, before fighting a
+-- dragon, it makes sense to prepare for different unexpected things. So let's
+-- define data types describing a Dragon Lair!
+--
+--  ⍟ A lair has a dragon and possibly a treasure chest (as described in the
+--    previous section). A lair also may not contain any treasures, but we'll never
+--    know until we explore the cave!
+--  ⍟ A dragon can have a unique magical power. But it can be literally anything!
+--    And we don't know in advance what power it has.
+--
+-- Create data types that describe such Dragon Lair! Use polymorphism to
+-- parametrise data types in places where values can be of any general type.
+--
+-- 🕯 HINT: 'Maybe' that some standard types we mentioned above are useful for
+--   maybe-treasure ;)
 
 data TreasureChest x = TreasureChest
     { treasureChestGold :: Int
@@ -958,7 +958,7 @@ And that 'getArchEnemy' method could be used with a lot of data types: Bool,
 Double,… name them all! Let’s have our first instances to show how it works:
 
 The syntax is simple and consistent with the typeclass declaration, but instead
-of the "class" keyword you need to have the "instance" keyword. Of course,
+of the "class: keyword you need to have the "instance" keyword. Of course,
 instead of the type parameter, you have to specify the concrete type, for which
 you are implementing the instance. And all the necessary methods should have its
 implementation for the particular data type.
@@ -968,7 +968,6 @@ instance ArchEnemy Bool where
     getArchEnemy :: Bool -> String
     getArchEnemy True = "False"
     getArchEnemy False = "True"
-
 
 instance ArchEnemy Int where
     getArchEnemy :: Int -> String
@@ -986,7 +985,7 @@ instance ArchEnemy Double where
 
 And then you can write polymorphic functions and not worry about which specific
 type is underhood until it has the instance of the desired typeclass. For that
-we are using __constraints__ in Haskell. It is the identification of affiliation
+we are using __constrains__ in Haskell. It is the identification of affiliation
 to the typeclass. The constraints should go after the "::" sign in the function
 type declaration. You can specify one or many constraints. If more than one they
 should be in parenthesis and comma-separated. The end of constraints is
@@ -1018,7 +1017,6 @@ ghci> revealArchEnemy "An adorable string that has no enemies (✿◠ω◠)"
     • In the expression: revealArchEnemy "An adorable string that has no enemies (✿◠ω◠)"
       In an equation for 'it': it = revealArchEnemy "An adorable string that has no enemies (✿◠ω◠)"
 
-
 Interestingly, it is possible to reuse existing instances of data types in the
 same typeclass instances as well. And we also can reuse the __constraints__ in
 the instance declaration for that!
@@ -1041,25 +1039,23 @@ type exists. You can see how we reuse the fact that the underlying type has this
 instance and apply this typeclass method to it.
 -}
 
-{- |
-=⚔️= Task 7
-
-Often we want to combine several values of a type and get a single value of the
-exact same type. We can combine different things: treasures, adventures, groups
-of heroes, etc.. So it makes sense to implement a typeclass for such a concept
-and define helpful instances.
-
-We will call such a typeclass "Append". You can find its definition below.
-
-Implement instances of "Append" for the following types:
-
-  ✧ The "Gold" newtype where append is the addition
-  ✧ "List" where append is list concatenation
-  ✧ *(Challenge): "Maybe" where append is appending of values inside "Just" constructors
-
--}
+-- |
+-- =⚔️= Task 7
+--
+-- Often we want to combine several values of a type and get a single value of the
+-- exact same type. We can combine different things: treasures, adventures, groups
+-- of heroes, etc.. So it makes sense to implement a typeclass for such a concept
+-- and define helpful instances.
+--
+-- We will call such a typeclass "Append". You can find its definition below.
+--
+-- Implement instances of "Append" for the following types:
+--
+--   ✧ The "Gold" newtype where append is the addition
+--   ✧ "List" where append is list concatenation
+--   ✧ *(Challenge): "Maybe" where append is appending of values inside "Just" constructors
 class Append a where
-    append :: a -> a -> a
+  append :: a -> a -> a
 
 newtype Gold = Gold Int
 
@@ -1190,8 +1186,8 @@ Implement data types and typeclasses, describing such a battle between two
 contestants, and write a function that decides the outcome of a fight!
 -}
 
--- TODO
 
+-- TODO
 {-
 You did it! Now it is time to open pull request with your changes
 and summon @vrom911 and @chshersh for the review!
