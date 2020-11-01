@@ -52,6 +52,8 @@ provide more top-level type signatures, especially when learning Haskell.
 
 module Chapter3 where
 
+import qualified GHC.Enum as Enum
+
 {-
 =🛡= Types in Haskell
 
@@ -67,408 +69,538 @@ Haskell has several different ways to create entirely new data types. Let's talk
 about them all and master our skill of data types construction.
 -}
 
--- |
--- =🛡= Type aliases
---
--- The simplest way to introduce a new type in Haskell is __type aliases__. Type
--- aliases are nothing more than just other names to already existing types.
--- A few examples:
---
--- @
--- type IntList = [Int]
--- type IntPair = (Int, Int)
--- @
---
--- Type aliases are just syntactic sugar and would be replaced by the real types
--- during compilation, so they don't bring too much to the table of data types.
--- However, they may make the life of a developer easier in some places.
---
--- One of the most common type aliases is 'String' that we already mentioned in the
--- List section of the previous chapter. And it is defined in the following way:
---
--- @
--- type String = [Char]
--- @
---
--- Now it makes much more sense of why 'String' is related to lists. You can see
--- that any list function could be used on 'String's as well.
---
--- 👩‍🔬 Due to the implementation details of lists, such representation of String
---   is highly inefficient. It is unfortunate that the list of characters is the
---   default String type. Experienced Haskellers use more efficient string types
---   'Text' and 'ByteString' from Haskell libraries: 'text' and 'bytestring'
---   correspondingly. But, for the simplicity of this training, we are using
---   'String'.
---
--- Another common type alias in the standard library is "FilePath", which is the
--- same as 'String' (which is the same as '[Char]'):
---
--- @
--- type FilePath = String
--- @
---
--- Usually, you are encouraged to introduce new data types instead of using aliases
--- for existing types. But it is still good to know about type aliases. They have a
--- few use-cases, and you can meet them in various Haskell libraries as well.
+{- |
+=🛡= Type aliases
 
--- |
--- =🛡= ADT
---
--- Let's not limit ourselves with just type aliases and define some real new data
--- structures. Are we the creators of new worlds or what?
---
--- Type in Haskell is like a box of information description that the object of that
--- type should contain.
---
--- Haskell uses Algebraic Data Types (ADT) system of types. That means that there
--- are two types of types: product and sum types.
---
--- To give you some basic understanding of the difference between these two, let's
--- go to the book shop. A book in there represents a product type: each book has
--- the name, author, cover, pages, etc. And all of these properties are mandatory
--- and come with the book. Bookshelf, in its turn, is the sum type. Each book in a
--- shelf is a different type, and you can choose one of them at once (there is no
--- such book where two or more physical books are sewed together).
---
--- We will show you an example now, just to illustrate all the above and then will
--- explain each concept separately. Note, this is not real syntax.
---
--- @
--- -- Product type
--- Book:
---      book name
---  AND book author
---  AND book cover
---  AND book pages
---
---
--- -- Sum type
--- BookShelf:
---     Good  book 1 : {Book}
---  OR Good  book 2 : {Book}
---  OR Cheap book 3 : {Book}
--- @
---
--- 👩‍🔬 We use AND in product types to represent the notion of having all fields at
---   the same time. In contrast, for the sum types, we use OR to tell only about a
---   single possibility. AND in logic corresponds to multiplication in math, and OR
---   corresponds to addition. You see that there is some math theory behind the
---   concept of data types in Haskell, and that's why they are called Algebraic Data
---   Types.
+The simplest way to introduce a new type in Haskell is __type aliases__. Type
+aliases are nothing more than just other names to already existing types.
+A few examples:
 
--- |
--- =🛡= Product type
---
--- Let's now see how the product data types look like in Haskell.
---
--- Product type should have a type name, one type constructor (the function that
--- lets you create the value of the type later) and the description of the fields
--- it consists of in the view of types.
---
--- When defining a custom type in Haskell, you use the __"data"__ keyword, write
--- the __type name__ you come up with after it, and then after the "=" sign you
--- specify the __constructor name__ followed by the __fields__.
---
--- When in action, a custom data type could be used in the following use case.
--- A definition of a data type for a knight with a name and number of victories
--- can look like this:
---
--- @
---       ┌─ type name
---       │
---       │       ┌─ constructor name (or constructor tag)
---       │       │
--- data Knight = MkKnight String Int
---  │                       │    │
---  │                       └────┴─── types of fields
---  │
---  └ "data" keyword
--- @
---
--- ♫ NOTE: The constructor can have the same name as the type itself. And in most
---   cases, they are indeed named identically. This is not a problem for Haskell,
---   because types live in the types namespace, and constructors live in the value
---   namespace. So there won't be any collisions and misunderstandings from the
---   compiler side. The names are unambiguous.
---
--- You can use the constructor name, to create a value of the "Knight" type.
---
--- @
--- arthur :: Knight
--- arthur = MkKnight "Arthur" 100
--- @
---
--- A constructor is just a function from fields to the type! You can verify this in GHCi:
---
--- ghci> :t MkKnight
--- MkNight :: String -> Int -> Knight
---
--- As in a regular function, you need to provide a 'String' and an 'Int' to the
--- 'MkNight' constructor in order to get the full-fledged 'Knight'.
---
--- Also, you can write a function that takes a Knight and returns its name.
--- It is convenient to use pattern matching for that:
---
--- @
--- knightName :: Knight -> String
--- knightName (MkKnight name _) = name
--- @
---
--- And you can extract the name in GHCi:
---
--- ghci> knightName arthur
--- "Arthur"
---
--- It is comfy to have such getters for all types, so Haskell provides a syntax for
--- defining __records__ — named parameters for the product data type fields.
---
--- Records have similar syntax for defining in Haskell as (unnamed) ordinary
--- product types, but fields are specified in the {} separated by a comma. Each
--- field should have a name and a type in this form: 'fieldName :: FieldType'.
---
--- The same definition of 'Knight' but with records should be written in the
--- following way:
---
--- @
--- data Knight = MkKnight
---     { knightName      :: String
---     , knightVictories :: Int
---     }
--- @
---
--- The above type definition is equivalent to the one we had before. We just gave
--- names to our fields for clarity. In addition, we also automatically get
--- functions "knightName :: Knight -> String" and "knightVictories :: Knight ->
--- Int". This is what records bring us — free getters!
---
--- The pattern matching on constructors of such records can stay the same. Besides,
--- you can use field names as getters.
---
--- 👩‍🔬 We are using a particular naming scheme of record field names in record
---   types in order to avoid name collisions. We add the data type name prefix in
---   front of each usual field name for that. As we saw, records create getters for
---   us, which are actually top-level functions. In Haskell, all functions defined at
---   top-level are available in the whole scope within a module. But Haskell forbids
---   creating multiple functions with the same name. The Haskell ecosystem has
---   numerous ways of solving this so-called "record" problem. Still, for simplicity
---   reasons, we are going to use disambiguation by a prefix which is one of the
---   standard resolutions for the scope problem.
---
--- In addition to getting top-level getters automatically, you get the following
--- features for free when using records over unnamed type fields:
---
---  1. Specify names during constructions — additional visual help for code.
---  2. Record-update syntax.
---
--- By default, all functions and constructors work with positional arguments
--- (unnamed, that are identified by its position in the type declaration). You
--- write a function or a constructor name first, and then you pass arguments
--- separated by space. But once we declare a product type as a record, we can use
--- field names for specifying constructor values. That means that the position
--- doesn't matter anymore as long as we specify the names. So it is like using
--- named arguments but only for constructors with records.
--- This is an alternative way of defining values of custom records.
---
--- Let's introduce Sir Arthur properly!
---
--- @
--- arthur :: Knight
--- arthur = MkKnight
---     { knightName = "Arthur"
---     , knightVictories = 100
---     }
--- @
---
--- After we created our custom types and defined some values, we may want to change
--- some fields of our values. But we can't actually change anything! Remember that
--- all values in Haskell are immutable, and you can't just change a field of some
--- type. You need to create a new value! Fortunately, for records, we can use the
--- __record update syntax__. Record update syntax allows creating new objects of a
--- record type by assigning new values to the fields of some existing record.
---
--- The syntax for record update is the following:
---
--- @
--- lancelot :: Knight
--- lancelot = arthur { knightName = "Lancelot" }
--- @
---
--- Without records, we had to write a custom setter function for each field of each
--- data type.
---
--- @
--- setKnightName :: String -> Knight -> Knight
--- setKnightName newName (MkKnight _ victories) =
---     MkKnight newName victories
--- @
---
--- ♫ NOTE: By default, GHCi doesn't know how to display values of custom types. If
---   you want to explore custom data types in REPL, you need to add a magical
---   "deriving (Show)" line (will be explained later in this chapter) at the end of a
---   record. Like so:
---
--- @
--- data Knight = MkKnight
---     { knightName      :: String
---     , knightVictories :: Int
---     } deriving (Show)
--- @
---
--- Now GHCi should be able to show the values of your types! Try playing with our
--- knights in GHCi to get the idea behind records.
---
--- 🕯 HINT: At this point, you may want to be able to enter multi-line strings in
---   GHCi. Start multi-line blocks by typing the ":{" command, and close such blocks
---   using the ":}" command.
---
--- ghci> :{
--- ghci| data Knight = MkKnight
--- ghci|     { knightName      :: String
--- ghci|     , knightVictories :: Int
--- ghci|     } deriving (Show)
--- ghci| :}
--- ghci>
---
--- Although, it may be easier to define data types in the module, and load it
--- afterwards.
+@
+type IntList = [Int]
+type IntPair = (Int, Int)
+@
 
--- |
--- =⚔️= Task 1
---
--- Define the Book product data type. You can take inspiration from our description
--- of a book, but you are not limited only by the book properties we described.
--- Create your own book type of your dreams!
+Type aliases are just syntactic sugar and would be replaced by the real types
+during compilation, so they don't bring too much to the table of data types.
+However, they may make the life of a developer easier in some places.
 
--- |
--- =⚔️= Task 2
---
--- Prepare to defend the honour of our kingdom! A monster attacks our brave knight.
--- Help him to fight this creature!
---
--- Define data types for Knights and Monsters, and write the "fight" function.
---
--- Both a knight and a monster have the following properties:
---
---  ✦ Health (the number of health points)
---  ✦ Attack (the number of attack units)
---  ✦ Gold (the number of coins)
---
--- When a monster fights a knight, the knight hits first, and the monster hits back
--- only if it survives (health is bigger than zero). A hit decreases the amount of
--- health by the number represented in the "attack" field.
---
--- Implement the "fight" function, that takes a monster and a knight, performs the
--- fight following the above rules and returns the amount of gold the knight has
--- after the fight. The battle has the following possible outcomes:
---
---  ⊛ Knight wins and takes the loot from the monster and adds it to their own
---    earned treasured
---  ⊛ Monster defeats the knight. In that case return -1
---  ⊛ Neither the knight nor the monster wins. On such an occasion, the knight
---    doesn't earn any money and keeps what they had before.
+One of the most common type aliases is 'String' that we already mentioned in the
+List section of the previous chapter. And it is defined in the following way:
 
--- |
--- =🛡= Sum types
---
--- Another powerful ambassador of ADT is __sum type__. Unlike ordinary records
--- (product types) that always have all the fields you wrote, sum types represent
--- alternatives of choices. Sum types can be seen as "one-of" data structures. They
--- contain many product types (described in the previous section) as alternatives.
---
--- To define a sum type, you have to specify all possible constructors separated
--- by "|". Each constructor on its own could have an ADT, that describes
--- this branch of the alternative.
---
--- There is at least one famous sum type that you have already seen — 'Bool' — the
--- simplest example of a sum type.
---
--- @
--- data Bool = False | True
--- @
---
--- 'Bool' is a representer of so-called __enumeration__ — a special case of sum
--- types, a sum of nullary constructors (constructors without fields).
--- Sum types can have much more than two constructors (but don't abuse this)!
---
--- Look at this one. We need more than two constructors to mirror the "Magic Type".
--- And none of the magic streams needs any fields. Just pure magic ;)
---
--- @
--- data MagicType
---     = DarkMagic
---     | LightMagic
---     | NeutralMagic
--- @
---
--- However, the real power of sum types unleashes when you combine them with
--- fields. As we mentioned, each "|" case in the sum type could be an ADT, so,
--- naturally, you can have constructors with fields, which are product types from
--- the previous section. If you think about it, the enumeration also contains a
--- product type, as it is absolutely legal to create a data type with one
--- constructor and without any fields: `data Emptiness = TotalVoid`.
---
--- To showcase such sum type, let's represent a possible loot from successfully
--- completing an adventure:
---
--- @
--- data Loot
---     = Sword Int  -- attack
---     | Shield Int  -- defence
---     | WizardStaff Power SpellLevel
--- @
---
--- You can create values of the sum types by using different constructors:
---
--- @
--- woodenSword :: Loot
--- woodenSword = Sword 2
---
--- adamantiumShield :: Loot
--- adamantiumShield = Shield 3000
--- @
---
--- And you can pattern match on different constructors as well.
---
--- @
--- acceptLoot :: Loot -> String
--- acceptLoot loot = case loot of
---     Sword _ -> "Thanks! That's a great sword!"
---     Shield _ -> "I'll accept this shield as a reward!"
---     WizardStaff _ _ -> "What?! I'm not a wizard, take it back!"
--- @
---
---
--- To sum up all the above, a data type in Haskell can have zero or more
--- constructors, and each constructor can have zero or more fields. This altogether
--- gives us product types (records with fields) and sum types (alternatives). The
--- concept of product types and sum types is called __Algebraic Data Type__. They
--- allow you to model your domain precisely, make illegal states unrepresentable
--- and provide more flexibility when working with data types.
+@
+type String = [Char]
+@
 
--- |
--- =⚔️= Task 3
---
--- Create a simple enumeration for the meal types (e.g. breakfast). The one who
--- comes up with the most number of names wins the challenge. Use your creativity!
+Now it makes much more sense of why 'String' is related to lists. You can see
+that any list function could be used on 'String's as well.
 
--- |
--- =⚔️= Task 4
---
--- Define types to represent a magical city in the world! A typical city has:
---
--- ⍟ Optional castle with a __name__ (as 'String')
--- ⍟ Wall, but only if the city has a castle
--- ⍟ Church or library but not both
--- ⍟ Any number of houses. Each house has one, two, three or four __people__ inside.
---
--- After defining the city, implement the following functions:
---
---  ✦ buildCastle — build a castle in the city. If the city already has a castle,
---    the old castle is destroyed, and the new castle with the __new name__ is built
---  ✦ buildHouse — add a new living house
---  ✦ buildWalls — build walls in the city. But since building walls is a
---    complicated task, walls can be built only if the city has a castle
---    and at least 10 living __people__ inside in all houses of the city totally.
+👩‍🔬 Due to the implementation details of lists, such representation of String
+  is highly inefficient. It is unfortunate that the list of characters is the
+  default String type. Experienced Haskellers use more efficient string types
+  'Text' and 'ByteString' from Haskell libraries: 'text' and 'bytestring'
+  correspondingly. But, for the simplicity of this training, we are using
+  'String'.
+
+Another common type alias in the standard library is "FilePath", which is the
+same as 'String' (which is the same as '[Char]'):
+
+@
+type FilePath = String
+@
+
+Usually, you are encouraged to introduce new data types instead of using aliases
+for existing types. But it is still good to know about type aliases. They have a
+few use-cases, and you can meet them in various Haskell libraries as well.
+-}
+
+{- |
+=🛡= ADT
+
+Let's not limit ourselves with just type aliases and define some real new data
+structures. Are we the creators of new worlds or what?
+
+Type in Haskell is like a box of information description that the object of that
+type should contain.
+
+Haskell uses Algebraic Data Types (ADT) system of types. That means that there
+are two types of types: product and sum types.
+
+To give you some basic understanding of the difference between these two, let's
+go to the book shop. A book in there represents a product type: each book has
+the name, author, cover, pages, etc. And all of these properties are mandatory
+and come with the book. Bookshelf, in its turn, is the sum type. Each book in a
+shelf is a different type, and you can choose one of them at once (there is no
+such book where two or more physical books are sewed together).
+
+We will show you an example now, just to illustrate all the above and then will
+explain each concept separately. Note, this is not real syntax.
+
+@
+-- Product type
+Book:
+     book name
+ AND book author
+ AND book cover
+ AND book pages
+
+
+-- Sum type
+BookShelf:
+    Good  book 1 : {Book}
+ OR Good  book 2 : {Book}
+ OR Cheap book 3 : {Book}
+@
+
+👩‍🔬 We use AND in product types to represent the notion of having all fields at
+  the same time. In contrast, for the sum types, we use OR to tell only about a
+  single possibility. AND in logic corresponds to multiplication in math, and OR
+  corresponds to addition. You see that there is some math theory behind the
+  concept of data types in Haskell, and that's why they are called Algebraic Data
+  Types.
+-}
+
+{- |
+=🛡= Product type
+
+Let's now see how the product data types look like in Haskell.
+
+Product type should have a type name, one type constructor (the function that
+lets you create the value of the type later) and the description of the fields
+it consists of in the view of types.
+
+When defining a custom type in Haskell, you use the __"data"__ keyword, write
+the __type name__ you come up with after it, and then after the "=" sign you
+specify the __constructor name__ followed by the __fields__.
+
+When in action, a custom data type could be used in the following use case.
+A definition of a data type for a knight with a name and number of victories
+can look like this:
+
+@
+      ┌─ type name
+      │
+      │       ┌─ constructor name (or constructor tag)
+      │       │
+data Knight = MkKnight String Int
+ │                       │    │
+ │                       └────┴─── types of fields
+ │
+ └ "data" keyword
+@
+
+♫ NOTE: The constructor can have the same name as the type itself. And in most
+  cases, they are indeed named identically. This is not a problem for Haskell,
+  because types live in the types namespace, and constructors live in the value
+  namespace. So there won't be any collisions and misunderstandings from the
+  compiler side. The names are unambiguous.
+
+You can use the constructor name, to create a value of the "Knight" type.
+
+@
+arthur :: Knight
+arthur = MkKnight "Arthur" 100
+@
+
+A constructor is just a function from fields to the type! You can verify this in GHCi:
+
+ghci> :t MkKnight
+MkKnight :: String -> Int -> Knight
+
+As in a regular function, you need to provide a 'String' and an 'Int' to the
+'MkKnight' constructor in order to get the full-fledged 'Knight'.
+
+Also, you can write a function that takes a Knight and returns its name.
+It is convenient to use pattern matching for that:
+
+@
+knightName :: Knight -> String
+knightName (MkKnight name _) = name
+@
+
+And you can extract the name in GHCi:
+
+ghci> knightName arthur
+"Arthur"
+
+It is comfy to have such getters for all types, so Haskell provides a syntax for
+defining __records__ — named parameters for the product data type fields.
+
+Records have similar syntax for defining in Haskell as (unnamed) ordinary
+product types, but fields are specified in the {} separated by a comma. Each
+field should have a name and a type in this form: 'fieldName :: FieldType'.
+
+The same definition of 'Knight' but with records should be written in the
+following way:
+
+@
+data Knight = MkKnight
+    { knightName      :: String
+    , knightVictories :: Int
+    }
+@
+
+The above type definition is equivalent to the one we had before. We just gave
+names to our fields for clarity. In addition, we also automatically get
+functions "knightName :: Knight -> String" and "knightVictories :: Knight ->
+Int". This is what records bring us — free getters!
+
+The pattern matching on constructors of such records can stay the same. Besides,
+you can use field names as getters.
+
+👩‍🔬 We are using a particular naming scheme of record field names in record
+  types in order to avoid name collisions. We add the data type name prefix in
+  front of each usual field name for that. As we saw, records create getters for
+  us, which are actually top-level functions. In Haskell, all functions defined at
+  top-level are available in the whole scope within a module. But Haskell forbids
+  creating multiple functions with the same name. The Haskell ecosystem has
+  numerous ways of solving this so-called "record" problem. Still, for simplicity
+  reasons, we are going to use disambiguation by a prefix which is one of the
+  standard resolutions for the scope problem.
+
+In addition to getting top-level getters automatically, you get the following
+features for free when using records over unnamed type fields:
+
+ 1. Specify names during constructions — additional visual help for code.
+ 2. Record-update syntax.
+
+By default, all functions and constructors work with positional arguments
+(unnamed, that are identified by its position in the type declaration). You
+write a function or a constructor name first, and then you pass arguments
+separated by space. But once we declare a product type as a record, we can use
+field names for specifying constructor values. That means that the position
+doesn't matter anymore as long as we specify the names. So it is like using
+named arguments but only for constructors with records.
+This is an alternative way of defining values of custom records.
+
+Let's introduce Sir Arthur properly!
+
+@
+arthur :: Knight
+arthur = MkKnight
+    { knightName = "Arthur"
+    , knightVictories = 100
+    }
+@
+
+After we created our custom types and defined some values, we may want to change
+some fields of our values. But we can't actually change anything! Remember that
+all values in Haskell are immutable, and you can't just change a field of some
+type. You need to create a new value! Fortunately, for records, we can use the
+__record update syntax__. Record update syntax allows creating new objects of a
+record type by assigning new values to the fields of some existing record.
+
+The syntax for record update is the following:
+
+@
+lancelot :: Knight
+lancelot = arthur { knightName = "Lancelot" }
+@
+
+Without records, we had to write a custom setter function for each field of each
+data type.
+
+@
+setKnightName :: String -> Knight -> Knight
+setKnightName newName (MkKnight _ victories) =
+    MkKnight newName victories
+@
+
+♫ NOTE: By default, GHCi doesn't know how to display values of custom types. If
+  you want to explore custom data types in REPL, you need to add a magical
+  "deriving (Show)" line (will be explained later in this chapter) at the end of a
+  record. Like so:
+
+@
+data Knight = MkKnight
+    { knightName      :: String
+    , knightVictories :: Int
+    } deriving (Show)
+@
+
+Now GHCi should be able to show the values of your types! Try playing with our
+knights in GHCi to get the idea behind records.
+
+🕯 HINT: At this point, you may want to be able to enter multi-line strings in
+  GHCi. Start multi-line blocks by typing the ":{" command, and close such blocks
+  using the ":}" command.
+
+ghci> :{
+ghci| data Knight = MkKnight
+ghci|     { knightName      :: String
+ghci|     , knightVictories :: Int
+ghci|     } deriving (Show)
+ghci| :}
+ghci>
+
+Although, it may be easier to define data types in the module, and load it
+afterwards.
+-}
+
+{- |
+=⚔️= Task 1
+
+Define the Book product data type. You can take inspiration from our description
+of a book, but you are not limited only by the book properties we described.
+Create your own book type of your dreams!
+-}
+
+data Book = Book {
+  name   :: String,
+  author :: String,
+  genre  :: String
+}
+
+{- |
+=⚔️= Task 2
+
+Prepare to defend the honour of our kingdom! A monster attacks our brave knight.
+Help him to fight this creature!
+
+Define data types for Knights and Monsters, and write the "fight" function.
+
+Both a knight and a monster have the following properties:
+
+ ✦ Health (the number of health points)
+ ✦ Attack (the number of attack units)
+ ✦ Gold (the number of coins)
+
+When a monster fights a knight, the knight hits first, and the monster hits back
+only if it survives (health is bigger than zero). A hit decreases the amount of
+health by the number represented in the "attack" field.
+
+Implement the "fight" function, that takes a monster and a knight, performs the
+fight following the above rules and returns the amount of gold the knight has
+after the fight. The battle has the following possible outcomes:
+
+ ⊛ Knight wins and takes the loot from the monster and adds it to their own
+   earned treasured
+ ⊛ Monster defeats the knight. In that case return -1
+ ⊛ Neither the knight nor the monster wins. On such an occasion, the knight
+   doesn't earn any money and keeps what they had before.
+
+-}
+
+data Knight = Knight {
+  knightHealth :: Int,
+  knightAttack :: Int,
+  knightGold   :: Int
+}
+
+data Monster = Monster {
+  monsterHealth :: Int,
+  monsterAttack :: Int,
+  monsterGold   :: Int
+}
+
+fight :: Monster -> Knight -> Int
+fight m k
+  | knightAttack k >= monsterHealth m = monsterGold m
+  | monsterAttack m >= knightAttack k = -1
+  | otherwise = knightGold k
+
+
+{- |
+=🛡= Sum types
+
+Another powerful ambassador of ADT is __sum type__. Unlike ordinary records
+(product types) that always have all the fields you wrote, sum types represent
+alternatives of choices. Sum types can be seen as "one-of" data structures. They
+contain many product types (described in the previous section) as alternatives.
+
+To define a sum type, you have to specify all possible constructors separated
+by "|". Each constructor on its own could have an ADT, that describes
+this branch of the alternative.
+
+There is at least one famous sum type that you have already seen — 'Bool' — the
+simplest example of a sum type.
+
+@
+data Bool = False | True
+@
+
+'Bool' is a representer of so-called __enumeration__ — a special case of sum
+types, a sum of nullary constructors (constructors without fields).
+Sum types can have much more than two constructors (but don't abuse this)!
+
+Look at this one. We need more than two constructors to mirror the "Magic Type".
+And none of the magic streams needs any fields. Just pure magic ;)
+
+@
+data MagicType
+    = DarkMagic
+    | LightMagic
+    | NeutralMagic
+@
+
+However, the real power of sum types unleashes when you combine them with
+fields. As we mentioned, each "|" case in the sum type could be an ADT, so,
+naturally, you can have constructors with fields, which are product types from
+the previous section. If you think about it, the enumeration also contains a
+product type, as it is absolutely legal to create a data type with one
+constructor and without any fields: `data Emptiness = TotalVoid`.
+
+To showcase such sum type, let's represent a possible loot from successfully
+completing an adventure:
+
+@
+data Loot
+    = Sword Int  -- attack
+    | Shield Int  -- defence
+    | WizardStaff Power SpellLevel
+@
+
+You can create values of the sum types by using different constructors:
+
+@
+woodenSword :: Loot
+woodenSword = Sword 2
+
+adamantiumShield :: Loot
+adamantiumShield = Shield 3000
+@
+
+And you can pattern match on different constructors as well.
+
+@
+acceptLoot :: Loot -> String
+acceptLoot loot = case loot of
+    Sword _ -> "Thanks! That's a great sword!"
+    Shield _ -> "I'll accept this shield as a reward!"
+    WizardStaff _ _ -> "What?! I'm not a wizard, take it back!"
+@
+
+
+To sum up all the above, a data type in Haskell can have zero or more
+constructors, and each constructor can have zero or more fields. This altogether
+gives us product types (records with fields) and sum types (alternatives). The
+concept of product types and sum types is called __Algebraic Data Type__. They
+allow you to model your domain precisely, make illegal states unrepresentable
+and provide more flexibility when working with data types.
+-}
+
+{- |
+=⚔️= Task 3
+
+Create a simple enumeration for the meal types (e.g. breakfast). The one who
+comes up with the most number of names wins the challenge. Use your creativity!
+-}
+
+data Meal =
+  Breakfast
+  | Brunch
+  | Lunch
+  | Dunch
+  | Dinner
+  | Dreakfast
+
+{- |
+=⚔️= Task 4
+
+Define types to represent a magical city in the world! A typical city has:
+
+⍟ Optional castle with a __name__ (as 'String')
+⍟ Wall, but only if the city has a castle
+⍟ Church or library but not both
+⍟ Any number of houses. Each house has one, two, three or four __people__ inside.
+
+After defining the city, implement the following functions:
+
+ ✦ buildCastle — build a castle in the city. If the city already has a castle,
+   the old castle is destroyed, and the new castle with the __new name__ is built
+ ✦ buildHouse — add a new living house
+ ✦ buildWalls — build walls in the city. But since building walls is a
+   complicated task, walls can be built only if the city has a castle
+   and at least 10 living __people__ inside in all houses of the city totally.
+-}
+
+data Castle = Castle {
+  castleName :: String
+}
+
+data Wall = Wall
+
+data Extra =
+  Church
+  | Library
+
+data House =
+  OneInside
+  | TwoInside
+  | ThreeInside
+  | FourInside
+
+peopleInsideHouse :: House -> Int
+peopleInsideHouse house =
+  case house of
+      OneInside ->
+        1
+      TwoInside ->
+        2
+      ThreeInside ->
+        3
+      FourInside ->
+        4
+
+data CommonCitySpecs = CommonCitySpecs {
+  extra  :: Extra,
+  houses :: [House]
+}
+
+data CityWithCastle = CityWithCastle {
+  castle           :: Castle,
+  maybeWall        :: Maybe Wall,
+  withCastleCommon :: CommonCitySpecs
+}
+
+data CityWithoutCastle = CityWithoutCastle {
+  withoutCastleCommon :: CommonCitySpecs
+}
+
+
+data City =
+  WithCastle CityWithCastle
+  | WithoutCastle CityWithoutCastle
+
+buildCastle :: Castle -> City -> City
+buildCastle castleToBuild targetCity =
+  case targetCity of
+    WithCastle c ->
+      WithCastle $ c { castle = Castle $ castleName castleToBuild }
+    WithoutCastle c ->
+      WithCastle $ CityWithCastle {
+        castle = castleToBuild,
+        maybeWall = Nothing,
+        withCastleCommon = withoutCastleCommon c
+      }
+
+buildWalls :: City -> City
+buildWalls targetCity =
+  case targetCity of
+    WithCastle c ->
+      case maybeWall c of
+        Just _ ->
+          targetCity
+        Nothing ->
+          if sum (map peopleInsideHouse $ houses $ withCastleCommon c) >= 10 then
+            WithCastle $ c {maybeWall = Just Wall }
+          else
+            targetCity
+    WithoutCastle _ ->
+      targetCity
+
+buildHouse :: House -> City -> City
+buildHouse houseToBuild targetCity =
+  let
+    newCommon :: CommonCitySpecs -> CommonCitySpecs
+    newCommon specs =
+      specs {houses = houseToBuild : houses specs}
+  in
+  case targetCity of
+    WithCastle c ->
+      WithCastle $ c { withCastleCommon = newCommon $ withCastleCommon c }
+    WithoutCastle c ->
+      WithoutCastle $ c { withoutCastleCommon = newCommon $ withoutCastleCommon c }
 
 {-
 =🛡= Newtypes
@@ -550,22 +682,32 @@ introducing extra newtypes.
 🕯 HINT: if you complete this task properly, you don't need to change the
     implementation of the "hitPlayer" function at all!
 -}
+
+newtype Health = Health Int
+newtype Armor = Armor Int
+newtype Attack = Attack Int
+newtype Dexterity = Dexterity Int
+newtype Strength = Strength Int
+
+newtype Damage = Damage Int
+newtype Defense = Defense Int
+
 data Player = Player
-  { playerHealth :: Int,
-    playerArmor :: Int,
-    playerAttack :: Int,
-    playerDexterity :: Int,
-    playerStrength :: Int
-  }
+    { playerHealth    :: Health
+    , playerArmor     :: Armor
+    , playerAttack    :: Attack
+    , playerDexterity :: Dexterity
+    , playerStrength  :: Strength
+    }
 
-calculatePlayerDamage :: Int -> Int -> Int
-calculatePlayerDamage attack strength = attack + strength
+calculatePlayerDamage :: Attack -> Strength -> Damage
+calculatePlayerDamage (Attack attack) (Strength strength) = Damage $ attack + strength
 
-calculatePlayerDefense :: Int -> Int -> Int
-calculatePlayerDefense armor dexterity = armor * dexterity
+calculatePlayerDefense :: Armor -> Dexterity -> Defense
+calculatePlayerDefense (Armor armor) (Dexterity dexterity) = Defense $ armor * dexterity
 
-calculatePlayerHit :: Int -> Int -> Int -> Int
-calculatePlayerHit damage defense health = health + defense - damage
+calculatePlayerHit :: Damage -> Defense -> Health -> Health
+calculatePlayerHit (Damage damage) (Defense defense) (Health health) = Health $ health + defense - damage
 
 -- The second player hits first player and the new first player is returned
 hitPlayer :: Player -> Player -> Player
@@ -744,6 +886,24 @@ hitPlayer player1 player2 =
 -- 🕯 HINT: 'Maybe' that some standard types we mentioned above are useful for
 --   maybe-treasure ;)
 
+data TreasureChest x = TreasureChest
+    { treasureChestGold :: Int
+    , treasureChestLoot :: x
+    }
+
+data Magic =
+  Fire
+
+data Dragon = Dragon {
+  dragonPower :: Magic
+}
+
+data Lair treasure = Lair {
+  dragon        :: Dragon,
+  maybeTreasure :: Maybe (TreasureChest treasure)
+}
+
+
 {-
 =🛡= Typeclasses
 
@@ -897,6 +1057,21 @@ instance and apply this typeclass method to it.
 class Append a where
   append :: a -> a -> a
 
+newtype Gold = Gold Int
+
+instance Append Gold where
+  append :: Gold -> Gold -> Gold
+  append (Gold a) (Gold b) = Gold $ a + b
+
+instance Append [a] where
+  append :: [a] -> [a] -> [a]
+  append = (++)
+
+instance (Append a) => Append (Maybe a) where
+  append :: Maybe a -> Maybe a -> Maybe a
+  append (Just a) (Just b) = Just $ append a b
+  append _ _               = Nothing
+
 {-
 =🛡= Standard Typeclasses and Deriving
 
@@ -957,6 +1132,25 @@ implement the following functions:
 🕯 HINT: to implement this task, derive some standard typeclasses
 -}
 
+data WeekDay =
+  Sunday
+  | Monday
+  | Tuesday
+  | Wednesday
+  | Thursday
+  | Friday
+  | Saturday
+  deriving (Enum)
+
+isWeekend :: WeekDay -> Bool
+isWeekend day = fromEnum day == 0 || fromEnum day == 6
+
+nextDay :: WeekDay -> WeekDay
+nextDay = succ
+
+daysToParty :: WeekDay -> Int
+daysToParty day = length $ enumFromTo day Friday
+
 {-
 =💣= Task 9*
 
@@ -992,6 +1186,8 @@ Implement data types and typeclasses, describing such a battle between two
 contestants, and write a function that decides the outcome of a fight!
 -}
 
+
+-- TODO
 {-
 You did it! Now it is time to open pull request with your changes
 and summon @vrom911 and @chshersh for the review!
