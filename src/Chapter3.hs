@@ -53,6 +53,8 @@ provide more top-level type signatures, especially when learning Haskell.
 
 module Chapter3 where
 
+import qualified GHC.Enum as Enum
+
 {-
 =🛡= Types in Haskell
 
@@ -344,6 +346,12 @@ of a book, but you are not limited only by the book properties we described.
 Create your own book type of your dreams!
 -}
 
+data Book = Book {
+  name   :: String,
+  author :: String,
+  genre  :: String
+}
+
 {- |
 =⚔️= Task 2
 
@@ -373,6 +381,25 @@ after the fight. The battle has the following possible outcomes:
    doesn't earn any money and keeps what they had before.
 
 -}
+
+data Knight = Knight {
+  knightHealth :: Int,
+  knightAttack :: Int,
+  knightGold   :: Int
+}
+
+data Monster = Monster {
+  monsterHealth :: Int,
+  monsterAttack :: Int,
+  monsterGold   :: Int
+}
+
+fight :: Monster -> Knight -> Int
+fight m k
+  | knightAttack k >= monsterHealth m = monsterGold m
+  | monsterAttack m >= knightAttack k = -1
+  | otherwise = knightGold k
+
 
 {- |
 =🛡= Sum types
@@ -460,6 +487,14 @@ Create a simple enumeration for the meal types (e.g. breakfast). The one who
 comes up with the most number of names wins the challenge. Use your creativity!
 -}
 
+data Meal =
+  Breakfast
+  | Brunch
+  | Lunch
+  | Dunch
+  | Dinner
+  | Dreakfast
+
 {- |
 =⚔️= Task 4
 
@@ -479,6 +514,94 @@ After defining the city, implement the following functions:
    complicated task, walls can be built only if the city has a castle
    and at least 10 living __people__ inside in all houses of the city totally.
 -}
+
+data Castle = Castle {
+  castleName :: String
+}
+
+data Wall = Wall
+
+data Extra =
+  Church
+  | Library
+
+data House =
+  OneInside
+  | TwoInside
+  | ThreeInside
+  | FourInside
+
+peopleInsideHouse :: House -> Int
+peopleInsideHouse house =
+  case house of
+      OneInside ->
+        1
+      TwoInside ->
+        2
+      ThreeInside ->
+        3
+      FourInside ->
+        4
+
+data CommonCitySpecs = CommonCitySpecs {
+  extra  :: Extra,
+  houses :: [House]
+}
+
+data CityWithCastle = CityWithCastle {
+  castle           :: Castle,
+  maybeWall        :: Maybe Wall,
+  withCastleCommon :: CommonCitySpecs
+}
+
+data CityWithoutCastle = CityWithoutCastle {
+  withoutCastleCommon :: CommonCitySpecs
+}
+
+
+data City =
+  WithCastle CityWithCastle
+  | WithoutCastle CityWithoutCastle
+
+buildCastle :: Castle -> City -> City
+buildCastle castleToBuild targetCity =
+  case targetCity of
+    WithCastle c ->
+      WithCastle $ c { castle = Castle $ castleName castleToBuild }
+    WithoutCastle c ->
+      WithCastle $ CityWithCastle {
+        castle = castleToBuild,
+        maybeWall = Nothing,
+        withCastleCommon = withoutCastleCommon c
+      }
+
+buildWalls :: City -> City
+buildWalls targetCity =
+  case targetCity of
+    WithCastle c ->
+      case maybeWall c of
+        Just _ ->
+          targetCity
+        Nothing ->
+          if sum (map peopleInsideHouse $ houses $ withCastleCommon c) >= 10 then
+            WithCastle $ c {maybeWall = Just Wall }
+          else
+            targetCity
+    WithoutCastle _ ->
+      targetCity
+
+buildHouse :: House -> City -> City
+buildHouse houseToBuild targetCity =
+  let
+    newCommon :: CommonCitySpecs -> CommonCitySpecs
+    newCommon specs =
+      specs {houses = houseToBuild : houses specs}
+  in
+  case targetCity of
+    WithCastle c ->
+      WithCastle $ c { withCastleCommon = newCommon $ withCastleCommon c }
+    WithoutCastle c ->
+      WithoutCastle $ c { withoutCastleCommon = newCommon $ withoutCastleCommon c }
 
 {-
 =🛡= Newtypes
@@ -560,22 +683,32 @@ introducing extra newtypes.
 🕯 HINT: if you complete this task properly, you don't need to change the
     implementation of the "hitPlayer" function at all!
 -}
+
+newtype Health = Health Int
+newtype Armor = Armor Int
+newtype Attack = Attack Int
+newtype Dexterity = Dexterity Int
+newtype Strength = Strength Int
+
+newtype Damage = Damage Int
+newtype Defense = Defense Int
+
 data Player = Player
-    { playerHealth    :: Int
-    , playerArmor     :: Int
-    , playerAttack    :: Int
-    , playerDexterity :: Int
-    , playerStrength  :: Int
+    { playerHealth    :: Health
+    , playerArmor     :: Armor
+    , playerAttack    :: Attack
+    , playerDexterity :: Dexterity
+    , playerStrength  :: Strength
     }
 
-calculatePlayerDamage :: Int -> Int -> Int
-calculatePlayerDamage attack strength = attack + strength
+calculatePlayerDamage :: Attack -> Strength -> Damage
+calculatePlayerDamage (Attack attack) (Strength strength) = Damage $ attack + strength
 
-calculatePlayerDefense :: Int -> Int -> Int
-calculatePlayerDefense armor dexterity = armor * dexterity
+calculatePlayerDefense :: Armor -> Dexterity -> Defense
+calculatePlayerDefense (Armor armor) (Dexterity dexterity) = Defense $ armor * dexterity
 
-calculatePlayerHit :: Int -> Int -> Int -> Int
-calculatePlayerHit damage defense health = health + defense - damage
+calculatePlayerHit :: Damage -> Defense -> Health -> Health
+calculatePlayerHit (Damage damage) (Defense defense) (Health health) = Health $ health + defense - damage
 
 -- The second player hits first player and the new first player is returned
 hitPlayer :: Player -> Player -> Player
@@ -753,6 +886,24 @@ parametrise data types in places where values can be of any general type.
   maybe-treasure ;)
 -}
 
+data TreasureChest x = TreasureChest
+    { treasureChestGold :: Int
+    , treasureChestLoot :: x
+    }
+
+data Magic =
+  Fire
+
+data Dragon = Dragon {
+  dragonPower :: Magic
+}
+
+data Lair treasure = Lair {
+  dragon        :: Dragon,
+  maybeTreasure :: Maybe (TreasureChest treasure)
+}
+
+
 {-
 =🛡= Typeclasses
 
@@ -910,6 +1061,20 @@ Implement instances of "Append" for the following types:
 class Append a where
     append :: a -> a -> a
 
+newtype Gold = Gold Int
+
+instance Append Gold where
+  append :: Gold -> Gold -> Gold
+  append (Gold a) (Gold b) = Gold $ a + b
+
+instance Append [a] where
+  append :: [a] -> [a] -> [a]
+  append = (++)
+
+instance (Append a) => Append (Maybe a) where
+  append :: Maybe a -> Maybe a -> Maybe a
+  append (Just a) (Just b) = Just $ append a b
+  append _ _               = Nothing
 
 {-
 =🛡= Standard Typeclasses and Deriving
@@ -971,6 +1136,25 @@ implement the following functions:
 🕯 HINT: to implement this task, derive some standard typeclasses
 -}
 
+data WeekDay =
+  Sunday
+  | Monday
+  | Tuesday
+  | Wednesday
+  | Thursday
+  | Friday
+  | Saturday
+  deriving (Enum)
+
+isWeekend :: WeekDay -> Bool
+isWeekend day = fromEnum day == 0 || fromEnum day == 6
+
+nextDay :: WeekDay -> WeekDay
+nextDay = succ
+
+daysToParty :: WeekDay -> Int
+daysToParty day = length $ enumFromTo day Friday
+
 {-
 =💣= Task 9*
 
@@ -1006,6 +1190,7 @@ Implement data types and typeclasses, describing such a battle between two
 contestants, and write a function that decides the outcome of a fight!
 -}
 
+-- TODO
 
 {-
 You did it! Now it is time to open pull request with your changes
